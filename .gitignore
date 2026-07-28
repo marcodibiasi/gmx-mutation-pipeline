@@ -1,0 +1,17 @@
+# Trajectories and coordinates
+*.xtc
+*.trr
+*.cpt
+*.tpr
+*.edr
+simulations/*
+
+# Various
+*.log
+\#*\#
+
+# Python
+__pycache__
+.ipynb_checkpoints/
+
+
