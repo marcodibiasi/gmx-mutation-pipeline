@@ -5,6 +5,7 @@
 *.tpr
 *.edr
 simulations/*
+!simulations/.gitkeep
 
 # Various
 *.log
