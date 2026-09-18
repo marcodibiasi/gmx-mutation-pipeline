@@ -20,7 +20,7 @@ ABS_PDB=$(realpath "$INPUT_PDB")
 PROT=$(basename "$INPUT_PDB" .pdb)
 RUN_DIR="simulations/run_${PROT}"
 
-echo -e "\n>>> SIMULATION: $PROT"
+echo -e "\n>>> PREPARATION: $PROT"
 echo "[INFO] Workspace: $RUN_DIR"
 mkdir -p "$RUN_DIR"
 cd "$RUN_DIR" || exit 1
@@ -113,7 +113,7 @@ gmx grompp \
     -c "${PROT}_solvated.gro" \
     -p "${PROT}.top" \
     -o ions.tpr \
-    -quiet &> logs/grompp.log
+    -quiet &> logs/grompp_ions.log
 
 echo "SOL" | gmx genion \
     -s ions.tpr \
@@ -125,3 +125,42 @@ echo "SOL" | gmx genion \
     -conc 0.15 \
     -quiet &> logs/genion.log
 
+
+# -----------------------
+#  SIMULATING THE SYSTEM
+# -----------------------
+echo -e "\n>>> SIMULATION: $PROT"
+
+# =======================
+#   ENERGY MINIMIZATION 
+# =======================
+# mdrun (simulator):
+# -s: input file (.tpr)
+# -deffnm: define file name 
+# -quiet: reduce the printed output
+#
+# energy (extracts energy data): 
+# -f: input file (.edr)
+# -o: output file (.xvg)
+echo "[n/n] Energy Minimization (grompp & mdrun)..."
+echo "integrator = steep
+nsteps = 10000
+emtol = 1000" > em.mdp
+mkdir -p "00-em"
+
+gmx grompp \
+    -f em.mdp \
+    -p "${PROT}.top" \
+    -c "${PROT}_box_ions.gro" \
+    -o 00-em/em.tpr \
+    -quiet &> logs/grompp_em.log
+
+gmx mdrun \
+    -s 00-em/em.tpr \
+    -deffnm 00-em/em \
+    -quiet &> logs/mdrun.log
+
+echo -e "Potential \n 0" | gmx energy \
+    -f 00-em/em.edr \
+    -o 00-em/potential_em.xvg \
+    -quiet &> logs/energy.log 
