@@ -142,10 +142,19 @@ echo -e "\n>>> SIMULATION: $PROT"
 # energy (extracts energy data): 
 # -f: input file (.edr)
 # -o: output file (.xvg)
-echo "[n/n] Energy Minimization (grompp & mdrun)..."
-echo "integrator = steep
-nsteps = 10000
-emtol = 1000" > em.mdp
+echo "[1/n] Energy Minimization (grompp & mdrun)..."
+echo "integrator  = steep 
+emtol = 1000.0 
+emstep = 0.01  
+nstenergy = 10   
+nsteps = 1000    
+constraints = h-bonds   
+rcoulomb = 1.0      
+rvdw = 1.0     
+vdw-modifier = Potential-shift-Verlet 
+DispCorr = EnerPres  
+coulombtype = PME       
+fourierspacing = 0.125" > em.mdp
 mkdir -p "00-em"
 
 gmx grompp \
@@ -162,5 +171,61 @@ gmx mdrun \
 
 echo -e "Potential \n 0" | gmx energy \
     -f 00-em/em.edr \
-    -o 00-em/potential_em.xvg \
-    -quiet &> logs/energy.log 
+    -o 00-em/potential_em.xvg\
+    -quiet &> logs/energy.log
+
+
+# =======================
+#   POSITION RESTRAINT 
+# =======================
+echo "[2/n] Position Restraint (grompp)..." 
+echo "title = NVT equilibration 
+define = -DPOSRES  
+integrator = md        
+nsteps = 50000     
+dt = 0.002     
+nstxout = 500       
+nstvout = 500       
+nstenergy = 500       
+nstlog = 500       
+continuation = no        
+constraint_algorithm = lincs     
+constraints = h-bonds   
+lincs_iter = 1         
+lincs_order = 4         
+cutoff-scheme = Verlet    
+ns_type = grid      
+nstlist = 10        
+rcoulomb = 1.0       
+rvdw = 1.0       
+coulombtype = PME       
+pme_order = 4         
+fourierspacing = 0.16      
+tcoupl = V-rescale             
+tc-grps = Protein Non-Protein   
+tau_t = 0.1     0.1           
+ref_t = 300     300           
+pcoupl = no        
+pbc = xyz       
+gen_vel = yes      
+gen_temp = 300      
+gen_seed = -1" > posres.mdp      
+mkdir -p "01-posres"  
+
+gmx grompp \
+    -f posres.mdp \
+    -c 00-em/em.gro \
+    -r 00-em/em.gro \
+    -p "${PROT}.top" \
+    -o 01-posres/posres.tpr \
+    -maxwarn 2 \
+    -quiet &> logs/posres1.log 
+
+gmx mdrun \
+    -s 01-posres/posres.tpr \
+    -deffnm 01-posres/posres \
+    -v \
+    -nt 12 \
+    -quiet &> logs/posres2.log 
+
+
