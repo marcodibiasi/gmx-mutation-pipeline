@@ -142,19 +142,23 @@ echo -e "\n>>> SIMULATION: $PROT"
 # energy (extracts energy data): 
 # -f: input file (.edr)
 # -o: output file (.xvg)
-echo "[1/n] Energy Minimization (grompp & mdrun)..."
-echo "integrator  = steep 
-emtol = 1000.0 
-emstep = 0.01  
-nstenergy = 10   
-nsteps = 1000    
-constraints = h-bonds   
-rcoulomb = 1.0      
-rvdw = 1.0     
-vdw-modifier = Potential-shift-Verlet 
-DispCorr = EnerPres  
-coulombtype = PME       
-fourierspacing = 0.125" > em.mdp
+echo "[1/3] Energy Minimization (grompp & mdrun)..."
+echo "integrator              = steep
+emtol                   = 1000.0
+emstep                  = 0.01
+nsteps                  = 100
+nstenergy               = 100
+
+cutoff-scheme           = Verlet
+ns_type                 = grid
+nstlist                 = 10
+rcoulomb                = 1.0
+rvdw                    = 1.0
+vdw-modifier            = Potential-shift-Verlet
+DispCorr                = EnerPres
+coulombtype             = PME
+fourierspacing          = 0.125
+pbc                     = xyz" > em.mdp
 mkdir -p "00-em"
 
 gmx grompp \
@@ -178,54 +182,198 @@ echo -e "Potential \n 0" | gmx energy \
 # =======================
 #   POSITION RESTRAINT 
 # =======================
-echo "[2/n] Position Restraint (grompp)..." 
-echo "title = NVT equilibration 
-define = -DPOSRES  
-integrator = md        
-nsteps = 50000     
-dt = 0.002     
-nstxout = 500       
-nstvout = 500       
-nstenergy = 500       
-nstlog = 500       
-continuation = no        
-constraint_algorithm = lincs     
-constraints = h-bonds   
-lincs_iter = 1         
-lincs_order = 4         
-cutoff-scheme = Verlet    
-ns_type = grid      
-nstlist = 10        
-rcoulomb = 1.0       
-rvdw = 1.0       
-coulombtype = PME       
-pme_order = 4         
-fourierspacing = 0.16      
-tcoupl = V-rescale             
-tc-grps = Protein Non-Protein   
-tau_t = 0.1     0.1           
-ref_t = 300     300           
-pcoupl = no        
-pbc = xyz       
-gen_vel = yes      
-gen_temp = 300      
-gen_seed = -1" > posres.mdp      
-mkdir -p "01-posres"  
+echo "[2/3] Position Restraint (grompp, mdrun)..." 
+# NVT equilibration
+echo "title                   = NVT equilibration
+define                  = -DPOSRES
+integrator              = md
+nsteps                  = 1000     ; 100 ps
+dt                      = 0.002
+continuation            = no
 
+nstxout                 = 0
+nstvout                 = 0
+nstfout                 = 0
+nstenergy               = 500
+nstlog                  = 500
+nstxout-compressed      = 500
+
+constraints             = h-bonds
+constraint_algorithm    = lincs
+lincs_iter              = 1
+lincs_order             = 4
+
+cutoff-scheme           = Verlet
+ns_type                 = grid
+nstlist                 = 10
+rcoulomb                = 1.0
+rvdw                    = 1.0
+vdw-modifier            = Potential-shift-Verlet
+DispCorr                = EnerPres
+coulombtype             = PME
+pme_order               = 4
+fourierspacing          = 0.125
+
+tcoupl                  = V-rescale
+tc-grps                 = Protein Non-Protein
+tau_t                   = 0.1     0.1
+ref_t                   = 300     300
+
+pcoupl                  = no
+pbc                     = xyz
+
+gen_vel                 = yes
+gen_temp                = 300
+gen_seed                = -1" > nvt_posres.mdp
+
+# NPT equilibration
+echo "title                   = NPT equilibration
+define                  = -DPOSRES
+integrator              = md
+nsteps                  = 100    ; 200 ps
+dt                      = 0.002
+continuation            = yes       ; riparte dalle velocità di NVT
+
+nstxout                 = 0
+nstvout                 = 0
+nstfout                 = 0
+nstenergy               = 500
+nstlog                  = 500
+nstxout-compressed      = 500
+
+constraints             = h-bonds
+constraint_algorithm    = lincs
+lincs_iter              = 1
+lincs_order             = 4
+
+cutoff-scheme           = Verlet
+ns_type                 = grid
+nstlist                 = 10
+rcoulomb                = 1.0
+rvdw                    = 1.0
+vdw-modifier            = Potential-shift-Verlet
+DispCorr                = EnerPres
+coulombtype             = PME
+pme_order               = 4
+fourierspacing          = 0.125
+
+tcoupl                  = V-rescale
+tc-grps                 = Protein Non-Protein
+tau_t                   = 1.0     1.0
+ref_t                   = 300     300
+
+pcoupl                  = C-rescale
+pcoupltype              = isotropic
+tau_p                   = 5.0
+ref_p                   = 1.0
+compressibility         = 4.5e-5
+refcoord_scaling        = com       ; obbligatorio in NPT con POSRES
+
+pbc                     = xyz
+gen_vel                 = no        ; non rigenerare velocità" > npt_posres.mdp
+
+mkdir -p "01-posres"  
+mkdir -p 01-posres/nvt 01-posres/npt
 gmx grompp \
-    -f posres.mdp \
+    -f nvt_posres.mdp \
     -c 00-em/em.gro \
     -r 00-em/em.gro \
     -p "${PROT}.top" \
-    -o 01-posres/posres.tpr \
+    -o 01-posres/nvt/nvt_posres.tpr \
     -maxwarn 2 \
     -quiet &> logs/posres1.log 
 
 gmx mdrun \
-    -s 01-posres/posres.tpr \
-    -deffnm 01-posres/posres \
+    -s 01-posres/nvt/nvt_posres.tpr \
+    -deffnm 01-posres/nvt/nvt_posres \
+    -quiet &> logs/posres2.log
+
+gmx grompp \
+    -f npt_posres.mdp \
+    -c 00-em/em.gro \
+    -r 00-em/em.gro \
+    -p "${PROT}.top" \
+    -o 01-posres/npt/npt_posres.tpr \
+    -maxwarn 2 \
+    -quiet &> logs/posres3.log 
+
+gmx mdrun \
+    -s 01-posres/npt/npt_posres.tpr \
+    -deffnm 01-posres/npt/npt_posres \
+    -quiet &> logs/posres4.log
+
+
+#check if the temperature and pressure are well equilibrated 
+# echo -e "Temperature \n Pressure \n 0" | gmx energy \
+#    -f 01-posres/posres.edr \
+#    -o 01-posres/Temp_Press.xvg \
+#    -quiet &> logs/temp_press.log
+
+#echo -e "Density \n 0" | gmx energy \
+#    -f 01-posres/posres.edr \
+#    -o 01-posres/Density.xvg \
+#    -quiet &> logs/temp_press.log
+
+# ======================================
+# PRODUCTION WITHOUT POSITION RESTRAINT
+# =====================================
+
+echo "[3/3] Production Without Position Restraint (grompp, mdrun)..." 
+echo "title                   = NPT equilibration
+integrator              = md
+nsteps                  = 100    ; 100 ns da cambiare
+dt                      = 0.002
+continuation            = yes       ; riparte dalle velocità di NVT
+
+nstxout                 = 0
+nstvout                 = 0
+nstfout                 = 0
+nstenergy               = 500
+nstlog                  = 500
+nstxout-compressed      = 10      ;da cambiare 
+
+constraints             = h-bonds
+constraint_algorithm    = lincs
+lincs_iter              = 1
+lincs_order             = 4
+
+cutoff-scheme           = Verlet
+ns_type                 = grid
+nstlist                 = 10
+rcoulomb                = 1.0
+rvdw                    = 1.0
+vdw-modifier            = Potential-shift-Verlet
+DispCorr                = EnerPres
+coulombtype             = PME
+pme_order               = 4
+fourierspacing          = 0.125
+
+tcoupl                  = V-rescale
+tc-grps                 = Protein Non-Protein
+tau_t                   = 1.0     1.0
+ref_t                   = 300     300
+
+pcoupl                  = C-rescale
+pcoupltype              = isotropic
+tau_p                   = 5.0
+ref_p                   = 1.0
+compressibility         = 4.5e-5
+refcoord_scaling        = com      
+pbc                     = xyz
+gen_vel                 = no" > prod.mdp
+
+mkdir 02-prod
+gmx grompp \
+    -f prod.mdp \
+    -c 01-posres/posres.gro \
+    -p "${PROT}.top" \
+    -o 02-prod/prod.tpr\
+    -quiet &> logs/prod1.log
+
+gmx mdrun \
+    -deffnm 02-prod/prod \
+    -s 02-prod/prod.tpr \
     -v \
-    -nt 12 \
-    -quiet &> logs/posres2.log 
+    -quiet &> logs/prod2.log
 
 
