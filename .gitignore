@@ -8,7 +8,7 @@ simulations/*
 !simulations/.gitkeep
 
 # Inputs
-inputs/*
+
 
 # Various
 *.log

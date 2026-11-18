@@ -1,0 +1,44 @@
+title                   = NPT equilibration
+define                  = -DPOSRES
+integrator              = md
+nsteps                  = 100    ; 200 ps
+dt                      = 0.002
+continuation            = yes       ; riparte dalle velocità di NVT
+
+nstxout                 = 0
+nstvout                 = 0
+nstfout                 = 0
+nstenergy               = 500
+nstlog                  = 500
+nstxout-compressed      = 500
+
+constraints             = h-bonds
+constraint_algorithm    = lincs
+lincs_iter              = 1
+lincs_order             = 4
+
+cutoff-scheme           = Verlet
+ns_type                 = grid
+nstlist                 = 10
+rcoulomb                = 1.0
+rvdw                    = 1.0
+vdw-modifier            = Potential-shift-Verlet
+DispCorr                = EnerPres
+coulombtype             = PME
+pme_order               = 4
+fourierspacing          = 0.125
+
+tcoupl                  = V-rescale
+tc-grps                 = Protein Non-Protein
+tau_t                   = 1.0     1.0
+ref_t                   = 300     300
+
+pcoupl                  = C-rescale
+pcoupltype              = isotropic
+tau_p                   = 5.0
+ref_p                   = 1.0
+compressibility         = 4.5e-5
+refcoord_scaling        = com       ; obbligatorio in NPT con POSRES
+
+pbc                     = xyz
+gen_vel                 = no        ; non rigenerare velocità
