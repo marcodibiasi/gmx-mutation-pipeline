@@ -1,4 +1,4 @@
-"title                   = NPT equilibration
+title                   = NPT equilibration
 integrator              = md
 nsteps                  = 100    ; 100 ns da cambiare
 dt                      = 0.002

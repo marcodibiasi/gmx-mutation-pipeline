@@ -219,18 +219,18 @@ gmx mdrun \
 
 echo "[3/3] Production Without Position Restraint (grompp, mdrun)..." 
 
-mkdir 02-prod
+mkdir -p 02-prod
 gmx grompp \
     -f "$MDP_DIR/prod.mdp" \
     -c 01-posres/npt/npt_posres.gro \
     -p "${PROT}.top" \
     -o 02-prod/prod.tpr\
+    -maxwarn 2\
     -quiet &> logs/prod1.log
 
 gmx mdrun \
-    -deffnm 02-prod/prod \
     -s 02-prod/prod.tpr \
-    -v \
+    -deffnm 02-prod/prod \
     -quiet &> logs/prod2.log
 
-
+echo ""
