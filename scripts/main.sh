@@ -45,8 +45,8 @@ select_pdb_file() {
 
 # MENU
 echo ""
-PS3="Select Option (1-4): "
-options=("Download PDB" "Mutate protein" "Run simulation" "Exit")
+PS3="Select Option (1-5): "
+options=("Download PDB" "Mutate protein" "Run simulation" "Erase /simulation" "Exit")
 
 select opt in "${options[@]}"; do
     echo ""
@@ -79,11 +79,19 @@ select opt in "${options[@]}"; do
             REPLY=""
             ;;
         4)
+          rm -r simulations/*
+          echo "simulations/ deleted "
+          REPLY=""
+          ;;
+
+
+
+        5)
             echo "I hope you had fun. See you soon ;)"
             exit 0
             ;;
         *)
-            echo "Insert a number from 1 to 4."
+            echo "Insert a number from 1 to 5."
             ;;
     esac
 done
