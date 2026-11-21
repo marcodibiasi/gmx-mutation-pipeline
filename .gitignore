@@ -13,6 +13,7 @@ simulations/*
 # Various
 *.log
 \#*\#
+errors.txt
 
 # Python
 __pycache__

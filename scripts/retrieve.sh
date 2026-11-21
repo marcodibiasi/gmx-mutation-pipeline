@@ -15,7 +15,7 @@ if [ ! -d "simulations" ] || [ ! -d "inputs" ] || [ ! -d "inputs/mdp_files" ] ; 
     exit 1
 fi
 
-PDB=${1^^}
+PDB=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')
 OUT="inputs/${PDB}.pdb"
 curl -f -s -S "https://files.rcsb.org/download/${PDB}.pdb" -o "inputs/${PDB}.pdb"
 
